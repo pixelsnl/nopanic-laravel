@@ -8,6 +8,7 @@ use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Exceptions\NoPanicTestException;
 use NoPanic\Laravel\Report\ReportFactory;
 use NoPanic\Laravel\Transport\Transport;
+use Throwable;
 
 class TestCommand extends Command
 {
@@ -15,7 +16,7 @@ class TestCommand extends Command
 
     protected $description = 'Send a test exception to NoPanic';
 
-    public function handle(ReportFactory $reportFactory, ContextCollector $contextCollector, EventTrail $eventTrail, Transport $transport): int
+    public function handle(): int
     {
         $key = config('nopanic.key');
 
@@ -25,13 +26,13 @@ class TestCommand extends Command
             return self::FAILURE;
         }
 
-        $payload = $reportFactory->make(
-            new NoPanicTestException('This is a test exception sent by nopanic:test.'),
-            $contextCollector->collect(),
-            $eventTrail->all(),
-        );
+        try {
+            $status = $this->send();
+        } catch (Throwable $exception) {
+            $this->components->error("Could not send the test exception: {$exception->getMessage()}");
 
-        $status = $transport->sendNow($payload);
+            return self::FAILURE;
+        }
 
         if ($status === null) {
             $this->components->error('Could not reach NoPanic. Check your endpoint and network connection.');
@@ -48,5 +49,16 @@ class TestCommand extends Command
         $this->components->error("NoPanic responded with HTTP status {$status}.");
 
         return self::FAILURE;
+    }
+
+    protected function send(): ?int
+    {
+        $payload = $this->laravel->make(ReportFactory::class)->make(
+            new NoPanicTestException('This is a test exception sent by nopanic:test.'),
+            $this->laravel->make(ContextCollector::class)->collect(),
+            $this->laravel->make(EventTrail::class)->all(),
+        );
+
+        return $this->laravel->make(Transport::class)->sendNow($payload);
     }
 }
