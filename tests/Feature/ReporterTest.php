@@ -110,9 +110,19 @@ it('sends pending payloads from the shutdown flush exactly once', function () {
 });
 
 it('keeps the suppressed count when building the report fails', function () {
+    config(['nopanic.reports_per_error_per_minute' => 1]);
+    $exception = new RuntimeException('cli');
+    $signature = $exception::class.'|'.$exception->getFile().'|'.$exception->getLine();
+    $throttle = app(ReportThrottle::class);
+    $throttle->attempt($signature);
+    $throttle->attempt($signature);
+
     app()->bind(ReportFactory::class, fn () => throw new LogicException('broken factory'));
+    app(Reporter::class)->report($exception);
+    app()->forgetInstance(ReportFactory::class);
+    app()->offsetUnset(ReportFactory::class);
 
-    app(Reporter::class)->report(new RuntimeException('cli'));
+    $this->travel(2)->minutes();
 
-    expect(app(ReportThrottle::class)->attempt('RuntimeException|'.__FILE__.'|0'))->toBe(0);
+    expect($throttle->attempt($signature))->toBe(1);
 });
