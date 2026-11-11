@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use NoPanic\Laravel\Tests\Support\PayloadNormaliser;
 
 it('builds a payload for a real request that matches the v1 fixture', function () {
     Http::fake(['*' => Http::response(['id' => 'x'], 202)]);
@@ -24,7 +25,7 @@ it('builds a payload for a real request that matches the v1 fixture', function (
     $sent = Http::recorded()->map(fn (array $pair) => $pair[0])->filter(fn (Request $request) => $request->method() === 'POST');
     expect($sent)->toHaveCount(1);
 
-    $actual = normalisePayload($sent->first()->data());
+    $actual = PayloadNormaliser::normalise($sent->first()->data());
     $path = __DIR__.'/../Fixtures/report-v1.json';
 
     if (! file_exists($path)) {
@@ -35,54 +36,3 @@ it('builds a payload for a real request that matches the v1 fixture', function (
 
     expect($actual)->toEqual(json_decode(file_get_contents($path), true));
 });
-
-/**
- * @param  array<string, mixed>  $payload
- * @return array<string, mixed>
- */
-function normalisePayload(array $payload): array
-{
-    $payload['seen_at'] = 1700000000000;
-    $payload['notifier'] = 'nopanic/laravel x.y.z';
-    $payload['language_version'] = 'x.y.z';
-    $payload['framework_version'] = 'x.y.z';
-    $payload['attributes']['environment']['php_version'] = 'x.y.z';
-    $payload['attributes']['environment']['laravel_version'] = 'x.y.z';
-    $payload['frames'] = normaliseFrames($payload['frames']);
-
-    foreach ($payload['events'] as $index => $event) {
-        $payload['events'][$index]['at'] = 1700000000000;
-
-        if (isset($event['data']['time_ms'])) {
-            $payload['events'][$index]['data']['time_ms'] = 0;
-        }
-    }
-
-    return $payload;
-}
-
-/**
- * @param  list<array<string, mixed>>  $frames
- * @return list<array<string, mixed>>
- */
-function normaliseFrames(array $frames): array
-{
-    $normalised = [];
-
-    foreach ($frames as $frame) {
-        $frame['line'] = 1;
-        $frame['method'] = preg_replace('/\{closure:.*\}/', '{closure}', (string) $frame['method']);
-
-        if ($frame['code_snippet'] !== []) {
-            $frame['code_snippet'] = ['1' => '<code>'];
-        }
-
-        $normalised[] = $frame;
-
-        if ($frame['class'] === 'Illuminate\\Foundation\\Http\\Kernel' && $frame['method'] === 'handle') {
-            break;
-        }
-    }
-
-    return $normalised;
-}
