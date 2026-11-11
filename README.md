@@ -43,6 +43,8 @@ Publish the config file with `php artisan vendor:publish --tag=nopanic-config`. 
 | `max_events` | `50` | Number of queries, logs and jobs kept as a trail per request, job or command. |
 | `reports_per_error_per_minute` | `3` | Local limit per distinct error. Extra occurrences are counted, not sent. |
 | `timeout_seconds` | `2` | Timeout for the request to NoPanic. Fractions such as `0.5` are allowed. |
+| `schedule_monitoring` | `true` | Ping NoPanic around scheduled tasks. |
+| `tasks_endpoint` | `env('NOPANIC_TASKS_ENDPOINT')` | Base URL for scheduled task syncs and pings. When empty, the scheme and host of `endpoint` are used with the path `/api/v1/tasks`. |
 
 ## What is sent
 
@@ -77,6 +79,26 @@ Add names to the `censor` list in `config/nopanic.php`:
 ```
 
 Matching is done on the field name, at any depth of the request input, and ignores case. A field is censored when its name equals a name in the list, or when its name contains `password`, `passwd`, `pwd`, `token`, `secret`, `apikey`, `api_key`, `private_key` or `credential` (so `api_token`, `refresh_token`, `_token` and `client_secret` are censored without being listed). The same rule decides which route parameters are censored in the URL. Header names are configured the same way in `censor_headers`, and the same rule applies to them.
+
+## Scheduled tasks
+
+NoPanic can watch your scheduled tasks and alert you when one does not start, runs too long or fails. Run this after every deploy (for example in your deploy script) so NoPanic knows your current schedule:
+
+```bash
+php artisan nopanic:schedule-sync
+```
+
+The command sends the name, command, cron expression and timezone of every task in your schedule. It prints how many tasks were synced, and exits with a failure code when NoPanic cannot be reached or rejects the request. When the package is not active (no key, or the environment is not in `enabled_environments`) it explains that and exits successfully.
+
+While the scheduler runs, the package pings NoPanic when a task starts, finishes or fails. A command that exits with a non zero code counts as failed. Background tasks are reported as finished when `schedule:finish` completes them. Pings use a timeout of 2 seconds and every error is swallowed, so a slow or unreachable NoPanic never breaks your scheduler. Only the task name, the event and, for failures, the exception message are sent. Command output is never sent.
+
+Tasks are named by their description when one is set, otherwise by their command without `php artisan` and the path to PHP, otherwise by the class of the job or closure followed by a hash of the cron expression. Give a task a stable name with `->description()`:
+
+```php
+Schedule::call(new SendInvoices)->dailyAt('08:00')->description('Send invoices');
+```
+
+When two tasks end up with the same name, the later ones get a suffix such as `-2`. Renaming a task in your code creates a new task in NoPanic after the next sync. Set `schedule_monitoring` to `false` to turn pings and the sync off.
 
 ## License
 

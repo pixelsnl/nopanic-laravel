@@ -5,6 +5,10 @@ return [
 
     'endpoint' => env('NOPANIC_ENDPOINT', 'https://ingest.nopanic.app/api/v1/reports'),
 
+    'tasks_endpoint' => env('NOPANIC_TASKS_ENDPOINT'),
+
+    'schedule_monitoring' => true,
+
     'enabled_environments' => ['production', 'staging'],
 
     'stage' => env('NOPANIC_STAGE', env('APP_ENV')),
