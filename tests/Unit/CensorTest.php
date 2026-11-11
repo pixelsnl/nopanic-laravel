@@ -55,3 +55,33 @@ it('censors api key and token headers by default', function () {
         'accept' => ['text/html'],
     ]);
 });
+
+it('censors common credential names without listing them', function () {
+    $result = (new Censor)->values([
+        'passwd' => 'a',
+        'user_pwd' => 'b',
+        'apikey' => 'c',
+        'private_key' => 'd',
+        'cvv' => 'e',
+        'pin' => 'f',
+        'otp' => 'g',
+        'shipping' => 'keep',
+        'opinion' => 'keep',
+    ]);
+
+    expect($result)->toBe([
+        'passwd' => '[censored]',
+        'user_pwd' => '[censored]',
+        'apikey' => '[censored]',
+        'private_key' => '[censored]',
+        'cvv' => '[censored]',
+        'pin' => '[censored]',
+        'otp' => '[censored]',
+        'shipping' => 'keep',
+        'opinion' => 'keep',
+    ]);
+});
+
+it('censors the x-auth-key header', function () {
+    expect((new Censor)->headers(['x-auth-key' => ['k']]))->toBe(['x-auth-key' => ['[censored]']]);
+});

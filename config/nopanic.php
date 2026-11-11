@@ -23,7 +23,12 @@ return [
         'credit_card',
         'card_number',
         'cvc',
+        'cvv',
+        'pin',
+        'otp',
         'iban',
+        'bsn',
+        'ssn',
         'signature',
     ],
 
@@ -37,6 +42,7 @@ return [
         'proxy-authorization',
         'x-api-key',
         'x-auth-token',
+        'x-auth-key',
     ],
 
     'max_events' => 50,

@@ -115,7 +115,48 @@ class ContextCollector
 
     protected function url(Request $request): string
     {
-        return $request->url();
+        $url = $request->url();
+        $route = $request->route();
+
+        if (! $route instanceof Route) {
+            return $url;
+        }
+
+        foreach ($route->originalParameters() as $name => $value) {
+            if (! is_string($value)) {
+                continue;
+            }
+
+            if ($value === '') {
+                continue;
+            }
+
+            if (! $this->censor->isSensitiveName((string) $name)) {
+                continue;
+            }
+
+            $url = str_replace('/'.rawurlencode($value), "/{$this->censor->mask()}", $url);
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param  array<string, mixed>  $headers
+     * @return array<string, mixed>
+     */
+    protected function withoutRefererQuery(array $headers): array
+    {
+        if (! isset($headers['referer'])) {
+            return $headers;
+        }
+
+        $headers['referer'] = array_map(
+            fn ($referer) => is_string($referer) ? preg_replace('/[?#].*$/', '', $referer) : $referer,
+            (array) $headers['referer'],
+        );
+
+        return $headers;
     }
 
     protected function livewireComponent(Request $request, ?Route $route): ?string
@@ -163,7 +204,7 @@ class ContextCollector
             $attributes['body'] = $this->censor->values($body);
         }
 
-        $attributes['headers'] = $this->censor->headers($request->headers->all());
+        $attributes['headers'] = $this->withoutRefererQuery($this->censor->headers($request->headers->all()));
         $attributes['ip'] = $request->ip();
 
         return $attributes;

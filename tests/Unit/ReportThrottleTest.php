@@ -99,3 +99,20 @@ it('does not keep counters of earlier minutes in memory', function () {
 
     expect($counters)->toHaveCount(1);
 });
+
+it('does not count skips twice when several long running workers share the cache', function () {
+    config(['nopanic.reports_per_error_per_minute' => 1]);
+    $firstWorker = new ReportThrottle;
+    $secondWorker = new ReportThrottle;
+    $signature = 'RuntimeException|/app/Foo.php|1';
+
+    $firstWorker->attempt($signature);
+    $firstWorker->attempt($signature);
+    $firstWorker->attempt($signature);
+
+    $this->travel(1)->minutes();
+    expect($secondWorker->attempt($signature))->toBe(2);
+
+    $this->travel(1)->minutes();
+    expect($firstWorker->attempt($signature))->toBe(0);
+});

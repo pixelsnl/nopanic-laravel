@@ -66,7 +66,11 @@ class ReportThrottle
 
         $skippedInCache = (int) GuardedCache::pull($this->skippedKey($hash));
 
-        return max($skippedInMemory, $skippedInCache);
+        if (GuardedCache::isDisabled()) {
+            return $skippedInMemory;
+        }
+
+        return $skippedInCache;
     }
 
     protected function skippedKey(string $hash): string

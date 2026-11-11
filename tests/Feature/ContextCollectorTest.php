@@ -179,3 +179,38 @@ it('does not treat other paths ending in update as livewire', function () {
 
     expect(app(ContextCollector::class)->collect()['entry_point']['type'])->toBe('web');
 });
+
+it('censors sensitive route parameters in the url', function () {
+    $captured = null;
+    Route::get('/reset-password/{token}', function () use (&$captured) {
+        $captured = app(ContextCollector::class)->collect();
+    });
+
+    $this->get('/reset-password/a1b2c3d4e5?email=jan@example.test');
+
+    expect($captured['entry_point']['url'])->toBe('http://localhost/reset-password/[censored]');
+    expect($captured['attributes']['request']['url'])->toBe('http://localhost/reset-password/[censored]');
+    expect(json_encode($captured))->not->toContain('a1b2c3d4e5');
+});
+
+it('keeps route parameters that are not sensitive in the url', function () {
+    $captured = null;
+    Route::get('/orders/{order}', function () use (&$captured) {
+        $captured = app(ContextCollector::class)->collect();
+    });
+
+    $this->get('/orders/42');
+
+    expect($captured['entry_point']['url'])->toBe('http://localhost/orders/42');
+});
+
+it('drops the query string from the referer header', function () {
+    $captured = null;
+    Route::get('/orders', function () use (&$captured) {
+        $captured = app(ContextCollector::class)->collect();
+    });
+
+    $this->get('/orders', ['Referer' => 'https://example.test/login?token=abc#top']);
+
+    expect($captured['attributes']['request']['headers']['referer'])->toBe(['https://example.test/login']);
+});

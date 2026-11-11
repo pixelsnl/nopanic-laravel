@@ -59,6 +59,8 @@ Publish the config file with `php artisan vendor:publish --tag=nopanic-config`. 
 * Values of censored fields and headers.
 * Basic auth credentials. The `php-auth-user`, `php-auth-pw` and `php-auth-digest` headers are always removed.
 * The body of Livewire requests.
+* Values of sensitive route parameters in the URL. A route such as `/reset-password/{token}` is sent as `/reset-password/[censored]`.
+* The query string of the `Referer` header.
 
 Exceptions that Laravel does not report (the `dontReport` list, such as validation and 404 errors) are not sent either. The package never throws into your application: failures while building or sending a report are swallowed. In web requests the report is sent after the response. Fatal errors are sent immediately, because the process may not get to the end of the request.
 
@@ -74,7 +76,7 @@ Add names to the `censor` list in `config/nopanic.php`:
 ],
 ```
 
-Matching is done on the field name, at any depth of the request input, and ignores case. A field is censored when its name equals a name in the list, or when its name contains `password`, `token` or `secret` (so `api_token`, `refresh_token`, `_token` and `client_secret` are censored without being listed). Header names are configured the same way in `censor_headers`, and the same rule applies to them.
+Matching is done on the field name, at any depth of the request input, and ignores case. A field is censored when its name equals a name in the list, or when its name contains `password`, `passwd`, `pwd`, `token`, `secret`, `apikey`, `api_key`, `private_key` or `credential` (so `api_token`, `refresh_token`, `_token` and `client_secret` are censored without being listed). The same rule decides which route parameters are censored in the URL. Header names are configured the same way in `censor_headers`, and the same rule applies to them.
 
 ## License
 

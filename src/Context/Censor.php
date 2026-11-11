@@ -7,7 +7,7 @@ class Censor
     protected string $mask = '[censored]';
 
     /** @var array<int, string> */
-    protected array $sensitiveFragments = ['password', 'token', 'secret'];
+    protected array $sensitiveFragments = ['password', 'passwd', 'pwd', 'token', 'secret', 'apikey', 'api_key', 'private_key', 'credential'];
 
     /** @var array<int, string> */
     protected array $basicAuthHeaders = ['php-auth-user', 'php-auth-pw', 'php-auth-digest'];
@@ -47,6 +47,16 @@ class Censor
         }
 
         return $censored;
+    }
+
+    public function isSensitiveName(string $name): bool
+    {
+        return $this->isSensitive(strtolower($name), $this->keys('nopanic.censor'));
+    }
+
+    public function mask(): string
+    {
+        return $this->mask;
     }
 
     /**
