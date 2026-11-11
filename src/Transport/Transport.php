@@ -2,8 +2,8 @@
 
 namespace NoPanic\Laravel\Transport;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use NoPanic\Laravel\Support\GuardedCache;
 use Throwable;
 
 class Transport
@@ -37,7 +37,7 @@ class Transport
             $response = Http::withBody($body, 'application/json')
                 ->withHeaders(['X-NoPanic-Key' => (string) config('nopanic.key')])
                 ->acceptJson()
-                ->timeout((int) config('nopanic.timeout_seconds', 2))
+                ->timeout(max(0.1, (float) config('nopanic.timeout_seconds', 2)))
                 ->connectTimeout(1)
                 ->post((string) config('nopanic.endpoint'));
 
@@ -97,11 +97,7 @@ class Transport
             return true;
         }
 
-        try {
-            $cachedUntil = (int) Cache::get('nopanic:paused-until', 0);
-        } catch (Throwable) {
-            return false;
-        }
+        $cachedUntil = (int) GuardedCache::get('nopanic:paused-until', 0);
 
         if ($cachedUntil > $now) {
             $this->pausedUntil = $cachedUntil;
@@ -117,9 +113,6 @@ class Transport
         $seconds = min(max($seconds, 1), 3600);
         $this->pausedUntil = now()->getTimestamp() + $seconds;
 
-        try {
-            Cache::put('nopanic:paused-until', $this->pausedUntil, $seconds);
-        } catch (Throwable) {
-        }
+        GuardedCache::put('nopanic:paused-until', $this->pausedUntil, $seconds);
     }
 }

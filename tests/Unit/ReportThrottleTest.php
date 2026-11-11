@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Cache;
+use NoPanic\Laravel\Support\GuardedCache;
 use NoPanic\Laravel\Transport\ReportThrottle;
 
 it('sends at most three reports per error per minute and carries the suppressed count', function () {
@@ -40,11 +41,51 @@ it('falls back to memory when the cache fails', function () {
     Cache::shouldReceive('put')->andThrow(new RuntimeException('cache down'));
     Cache::shouldReceive('increment')->andThrow(new RuntimeException('cache down'));
     Cache::shouldReceive('add')->andThrow(new RuntimeException('cache down'));
+    Cache::shouldReceive('pull')->andThrow(new RuntimeException('cache down'));
 
     $throttle = app(ReportThrottle::class);
     $results = collect(range(1, 4))->map(fn () => $throttle->attempt('X|/x.php|1'));
 
     expect($results->all())->toBe([0, 0, 0, null]);
+
+    $this->travel(1)->minutes();
+
+    expect($throttle->attempt('X|/x.php|1'))->toBe(1);
+});
+
+it('stops using the cache for the rest of the process after a cache failure', function () {
+    Cache::shouldReceive('get')->once()->andThrow(new RuntimeException('cache down'));
+    Cache::shouldReceive('put')->never();
+    Cache::shouldReceive('pull')->never();
+
+    $throttle = app(ReportThrottle::class);
+
+    expect($throttle->attempt('X|/x.php|1'))->toBe(0);
+    expect($throttle->attempt('X|/x.php|1'))->toBe(0);
+    expect(GuardedCache::isDisabled())->toBeTrue();
+});
+
+it('keeps the suppressed count in the cache for the next request', function () {
+    $signature = 'RuntimeException|/app/Foo.php|1';
+    $firstRequest = new ReportThrottle;
+
+    $results = collect(range(1, 5))->map(fn () => $firstRequest->attempt($signature));
+    expect($results->all())->toBe([0, 0, 0, null, null]);
+
+    $this->travel(1)->minutes();
+
+    $nextRequest = new ReportThrottle;
+
+    expect($nextRequest->attempt($signature))->toBe(2);
+    expect((new ReportThrottle)->attempt($signature))->toBe(0);
+});
+
+it('adds skips recorded before sending to the suppressed count', function () {
+    $throttle = new ReportThrottle;
+
+    $throttle->recordSkipped('A|/a.php|1', 4);
+
+    expect((new ReportThrottle)->attempt('A|/a.php|1'))->toBe(4);
 });
 
 it('does not keep counters of earlier minutes in memory', function () {

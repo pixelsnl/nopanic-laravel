@@ -2,7 +2,7 @@
 
 namespace NoPanic\Laravel;
 
-use Illuminate\Foundation\Application;
+use Illuminate\Contracts\Foundation\Application;
 use NoPanic\Laravel\Context\ContextCollector;
 use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Exceptions\NoPanicTestException;
@@ -15,12 +15,17 @@ use Throwable;
 
 class Reporter
 {
+    protected static bool $shutdownRegistered = false;
+
+    protected static ?Reporter $reporterToFlushOnShutdown = null;
+
     protected bool $isReporting = false;
 
-    /** @var list<array<string, mixed>> */
+    /** @var list<array{signature: string, payload: array<string, mixed>}> */
     protected array $pending = [];
 
-    protected bool $shutdownRegistered = false;
+    /** @var array<string, int> */
+    protected array $droppedBeforeSending = [];
 
     public function report(Throwable $exception): void
     {
@@ -56,52 +61,56 @@ class Reporter
             $application->make(EventTrail::class)->all(),
         );
 
-        $suppressedCount = $application->make(ReportThrottle::class)->attempt($this->signature($exception));
-
-        if ($suppressedCount === null) {
-            return;
-        }
-
-        $payload['suppressed_count'] = $suppressedCount;
+        $signature = $this->signature($exception);
 
         if ($exception instanceof FatalError || ! $this->isHandlingHttpRequest($application)) {
-            $application->make(Transport::class)->send($payload);
+            $this->throttleAndSend($signature, $payload);
 
             return;
         }
 
-        $this->defer($application, $payload);
+        $this->defer($application, $signature, $payload);
     }
 
     /**
      * @param  array<string, mixed>  $payload
      */
-    protected function defer(Application $application, array $payload): void
+    protected function defer(Application $application, string $signature, array $payload): void
     {
-        $this->pending[] = $payload;
+        $pendingWithSameSignature = count(array_filter(
+            $this->pending,
+            fn (array $pending) => $pending['signature'] === $signature,
+        ));
 
-        if (! $this->shutdownRegistered) {
-            $this->shutdownRegistered = true;
-            register_shutdown_function(fn () => $this->flushPending());
+        if ($pendingWithSameSignature >= max(1, (int) config('nopanic.reports_per_error_per_minute', 3))) {
+            $this->droppedBeforeSending[$signature] = ($this->droppedBeforeSending[$signature] ?? 0) + 1;
+
+            return;
         }
+
+        $this->pending[] = ['signature' => $signature, 'payload' => $payload];
+
+        $this->registerShutdownFlush();
 
         $application->terminating(fn () => $this->flushPending());
     }
 
-    public function flushPending(): void
+    protected function registerShutdownFlush(): void
     {
-        $payloads = $this->pending;
-        $this->pending = [];
+        self::$reporterToFlushOnShutdown = $this;
 
-        foreach ($payloads as $payload) {
-            $this->sendGuarded($payload);
+        if (self::$shutdownRegistered) {
+            return;
         }
+
+        self::$shutdownRegistered = true;
+
+        register_shutdown_function(static function (): void {
+            self::$reporterToFlushOnShutdown?->flushPending();
+        });
     }
 
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    protected function sendGuarded(array $payload): void
+    public function flushPending(): void
     {
         if ($this->isReporting) {
             return;
@@ -110,11 +119,61 @@ class Reporter
         $this->isReporting = true;
 
         try {
-            app(Transport::class)->send($payload);
-        } catch (Throwable) {
+            $pending = $this->pending;
+            $dropped = $this->droppedBeforeSending;
+            $this->pending = [];
+            $this->droppedBeforeSending = [];
+
+            foreach ($pending as $report) {
+                $this->sendGuarded($report['signature'], $report['payload']);
+            }
+
+            $this->recordDropped($dropped);
         } finally {
             $this->isReporting = false;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function sendGuarded(string $signature, array $payload): void
+    {
+        try {
+            $this->throttleAndSend($signature, $payload);
+        } catch (Throwable) {
+        }
+    }
+
+    /**
+     * @param  array<string, int>  $dropped
+     */
+    protected function recordDropped(array $dropped): void
+    {
+        try {
+            $throttle = app(ReportThrottle::class);
+
+            foreach ($dropped as $signature => $times) {
+                $throttle->recordSkipped($signature, $times);
+            }
+        } catch (Throwable) {
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function throttleAndSend(string $signature, array $payload): void
+    {
+        $suppressedCount = app(ReportThrottle::class)->attempt($signature);
+
+        if ($suppressedCount === null) {
+            return;
+        }
+
+        $payload['suppressed_count'] = $suppressedCount;
+
+        app(Transport::class)->send($payload);
     }
 
     protected function isOwnException(Throwable $exception): bool
@@ -137,6 +196,10 @@ class Reporter
             return true;
         }
 
-        return $application->bound('router') && $application['router']->current() !== null;
+        if (! $application->bound('router')) {
+            return false;
+        }
+
+        return $application->make('router')->current() !== null;
     }
 }

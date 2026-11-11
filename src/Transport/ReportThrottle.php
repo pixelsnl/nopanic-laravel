@@ -2,8 +2,7 @@
 
 namespace NoPanic\Laravel\Transport;
 
-use Illuminate\Support\Facades\Cache;
-use Throwable;
+use NoPanic\Laravel\Support\GuardedCache;
 
 class ReportThrottle
 {
@@ -26,46 +25,52 @@ class ReportThrottle
         }
 
         $key = "nopanic:throttle:{$hash}:{$minute}";
-        $count = max($this->counts[$key] ?? 0, $this->cachedCount($key));
+        $count = max($this->counts[$key] ?? 0, (int) GuardedCache::get($key, 0));
 
         if ($count >= (int) config('nopanic.reports_per_error_per_minute', 3)) {
-            $this->rememberSkip($hash);
+            $this->rememberSkips($hash, 1);
 
             return null;
         }
 
         $this->counts[$key] = $count + 1;
-        $this->storeCount($key, $count + 1);
+        GuardedCache::put($key, $count + 1, 120);
 
-        $suppressed = $this->skipped[$hash] ?? 0;
-        unset($this->skipped[$hash]);
-
-        return $suppressed;
+        return $this->pullSkipped($hash);
     }
 
-    protected function rememberSkip(string $hash): void
+    public function recordSkipped(string $signature, int $times): void
     {
-        $this->skipped[$hash] = ($this->skipped[$hash] ?? 0) + 1;
+        if ($times < 1) {
+            return;
+        }
+
+        $this->rememberSkips(sha1($signature), $times);
+    }
+
+    protected function rememberSkips(string $hash, int $times): void
+    {
+        $this->skipped[$hash] = ($this->skipped[$hash] ?? 0) + $times;
 
         if (count($this->skipped) > 500) {
             $this->skipped = array_slice($this->skipped, -250, null, true);
         }
+
+        GuardedCache::increment($this->skippedKey($hash), $times, 3600);
     }
 
-    protected function cachedCount(string $key): int
+    protected function pullSkipped(string $hash): int
     {
-        try {
-            return (int) Cache::get($key, 0);
-        } catch (Throwable) {
-            return 0;
-        }
+        $skippedInMemory = $this->skipped[$hash] ?? 0;
+        unset($this->skipped[$hash]);
+
+        $skippedInCache = (int) GuardedCache::pull($this->skippedKey($hash));
+
+        return max($skippedInMemory, $skippedInCache);
     }
 
-    protected function storeCount(string $key, int $count): void
+    protected function skippedKey(string $hash): string
     {
-        try {
-            Cache::put($key, $count, 120);
-        } catch (Throwable) {
-        }
+        return "nopanic:skipped:{$hash}";
     }
 }

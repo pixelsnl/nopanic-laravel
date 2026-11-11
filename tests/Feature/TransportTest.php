@@ -110,3 +110,32 @@ it('substitutes invalid utf8 instead of failing', function () {
 
     Http::assertSentCount(1);
 });
+
+it('applies the configured timeout with fractions of a second', function () {
+    $options = null;
+    Http::fake(function (Request $request, array $requestOptions) use (&$options) {
+        $options = $requestOptions;
+
+        return Http::response(null, 202);
+    });
+    config(['nopanic.timeout_seconds' => 0.5]);
+
+    app(Transport::class)->send(['exception' => ['class' => 'RuntimeException']]);
+
+    expect($options['timeout'])->toBe(0.5);
+    expect($options['connect_timeout'])->toBe(1);
+});
+
+it('never uses a timeout below a tenth of a second', function () {
+    $options = null;
+    Http::fake(function (Request $request, array $requestOptions) use (&$options) {
+        $options = $requestOptions;
+
+        return Http::response(null, 202);
+    });
+    config(['nopanic.timeout_seconds' => 0]);
+
+    app(Transport::class)->send(['exception' => ['class' => 'RuntimeException']]);
+
+    expect($options['timeout'])->toBe(0.1);
+});
