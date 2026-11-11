@@ -19,7 +19,7 @@ class EventTrail
         $this->events[] = [
             'type' => $type,
             'at' => (int) (microtime(true) * 1000),
-            'data' => $data,
+            'data' => $this->capStrings($data),
         ];
 
         $maxEvents = max(0, (int) $this->config->get('nopanic.max_events', 50));
@@ -27,6 +27,20 @@ class EventTrail
         if (count($this->events) > $maxEvents) {
             $this->events = array_slice($this->events, count($this->events) - $maxEvents);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function capStrings(array $data): array
+    {
+        $maxLength = 2000;
+
+        return array_map(
+            fn (mixed $value) => is_string($value) ? mb_substr($value, 0, $maxLength) : $value,
+            $data,
+        );
     }
 
     /**

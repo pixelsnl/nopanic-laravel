@@ -7,7 +7,10 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\Looping;
+use Illuminate\Queue\Jobs\SyncJob;
 use Laravel\Octane\Events\RequestReceived;
 use NoPanic\Laravel\Context\EntryPoint;
 use Throwable;
@@ -21,6 +24,8 @@ class RegisterRecorders
         $events->listen(QueryExecuted::class, $this->guard($this->recordQuery(...)));
         $events->listen(MessageLogged::class, $this->guard($this->recordLog(...)));
         $events->listen(JobProcessing::class, $this->guard($this->startJob(...)));
+        $events->listen(JobProcessed::class, $this->guard($this->finishJob(...)));
+        $events->listen(Looping::class, $this->guard($this->finishJob(...)));
         $events->listen(CommandStarting::class, $this->guard($this->startCommand(...)));
         $events->listen(RequestHandled::class, $this->guard($this->startFresh(...)));
 
@@ -58,20 +63,63 @@ class RegisterRecorders
 
     protected function startJob(JobProcessing $event): void
     {
+        if ($this->isSyncJob($event)) {
+            return;
+        }
+
         $jobClass = $event->job->resolveName();
 
         $this->trail->flush();
-        EntryPoint::reset();
         EntryPoint::markJob($jobClass);
 
         $this->trail->record('job', ['class' => $jobClass]);
     }
 
+    protected function finishJob(JobProcessed|Looping $event): void
+    {
+        if ($event instanceof JobProcessed && $this->isSyncJob($event)) {
+            return;
+        }
+
+        EntryPoint::finishJob();
+    }
+
+    protected function isSyncJob(JobProcessing|JobProcessed $event): bool
+    {
+        if ($event->connectionName === 'sync') {
+            return true;
+        }
+
+        return $event->job instanceof SyncJob;
+    }
+
     protected function startCommand(CommandStarting $event): void
     {
+        if ($this->isHandlingHttpRequest()) {
+            return;
+        }
+
+        if (EntryPoint::isMarked()) {
+            return;
+        }
+
         $this->trail->flush();
-        EntryPoint::reset();
         EntryPoint::markCommand((string) $event->command);
+    }
+
+    protected function isHandlingHttpRequest(): bool
+    {
+        $application = app();
+
+        if (! $application->runningInConsole()) {
+            return true;
+        }
+
+        if (! $application->bound('router')) {
+            return false;
+        }
+
+        return $application->make('router')->current() !== null;
     }
 
     protected function startFresh(object $event): void
