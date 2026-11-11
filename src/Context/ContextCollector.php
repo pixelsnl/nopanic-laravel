@@ -120,10 +120,7 @@ class ContextCollector
 
     protected function livewireComponent(Request $request, ?Route $route): ?string
     {
-        $isUpdate = str_ends_with(trim($request->path(), '/'), 'livewire/update')
-            || str_starts_with((string) $route?->getName(), 'livewire.');
-
-        if (! $isUpdate) {
+        if (! $this->isLivewireUpdate($request, $route)) {
             return null;
         }
 
@@ -138,6 +135,15 @@ class ContextCollector
         $name = is_array($decoded) ? ($decoded['memo']['name'] ?? null) : null;
 
         return is_string($name) ? $name : 'livewire';
+    }
+
+    protected function isLivewireUpdate(Request $request, ?Route $route): bool
+    {
+        if (str_ends_with((string) $route?->getName(), 'livewire.update')) {
+            return true;
+        }
+
+        return preg_match('#(^|/)livewire(-[a-f0-9]+)?/update$#', trim($request->path(), '/')) === 1;
     }
 
     /**

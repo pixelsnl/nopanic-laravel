@@ -149,3 +149,33 @@ it('drops basic auth headers even when no headers are configured for censoring',
     expect($headers)->not->toHaveKeys(['php-auth-user', 'php-auth-pw', 'php-auth-digest']);
     expect(json_encode($headers))->not->toContain('hunter2')->not->toContain('digest-value');
 });
+
+it('describes a livewire 4 update on the hashed endpoint', function () {
+    $payload = ['components' => [['snapshot' => json_encode(['memo' => ['name' => 'orders.table']]), 'updates' => [], 'calls' => [['method' => 'save']]]]];
+    $request = Request::create('/livewire-1a2b3c4d/update', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($payload));
+    app()->instance('request', $request);
+
+    $context = app(ContextCollector::class)->collect();
+
+    expect($context['entry_point'])->toMatchArray(['type' => 'livewire', 'handler' => 'orders.table']);
+    expect($context['attributes']['request']['livewire'])->toBe(['components' => ['orders.table'], 'calls' => ['save']]);
+});
+
+it('describes a livewire 4 update by its route name', function () {
+    $context = null;
+    Route::post('/custom-endpoint', function () use (&$context) {
+        $context = app(ContextCollector::class)->collect();
+
+        return 'ok';
+    })->name('default-livewire.update');
+
+    $this->postJson('/custom-endpoint', ['components' => [['snapshot' => json_encode(['memo' => ['name' => 'orders.table']]), 'updates' => [], 'calls' => []]]]);
+
+    expect($context['entry_point'])->toMatchArray(['type' => 'livewire', 'handler' => 'orders.table']);
+});
+
+it('does not treat other paths ending in update as livewire', function () {
+    app()->instance('request', Request::create('/orders/update', 'POST'));
+
+    expect(app(ContextCollector::class)->collect()['entry_point']['type'])->toBe('web');
+});
