@@ -2,7 +2,7 @@
 
 namespace NoPanic\Laravel;
 
-use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Foundation\Application;
 use NoPanic\Laravel\Context\ContextCollector;
 use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Exceptions\NoPanicTestException;
@@ -10,13 +10,17 @@ use NoPanic\Laravel\Report\ReportFactory;
 use NoPanic\Laravel\Support\Activation;
 use NoPanic\Laravel\Transport\ReportThrottle;
 use NoPanic\Laravel\Transport\Transport;
+use Symfony\Component\ErrorHandler\Error\FatalError;
 use Throwable;
 
 class Reporter
 {
     protected bool $isReporting = false;
 
-    public function __construct(protected Application $application) {}
+    /** @var list<array<string, mixed>> */
+    protected array $pending = [];
+
+    protected bool $shutdownRegistered = false;
 
     public function report(Throwable $exception): void
     {
@@ -36,7 +40,9 @@ class Reporter
 
     protected function handle(Throwable $exception): void
     {
-        if (! $this->application->make(Activation::class)->isEnabled()) {
+        $application = app();
+
+        if (! $application->make(Activation::class)->isEnabled()) {
             return;
         }
 
@@ -44,26 +50,52 @@ class Reporter
             return;
         }
 
-        $suppressedCount = $this->application->make(ReportThrottle::class)->attempt($this->signature($exception));
+        $payload = $application->make(ReportFactory::class)->make(
+            $exception,
+            $application->make(ContextCollector::class)->collect(),
+            $application->make(EventTrail::class)->all(),
+        );
+
+        $suppressedCount = $application->make(ReportThrottle::class)->attempt($this->signature($exception));
 
         if ($suppressedCount === null) {
             return;
         }
 
-        $payload = $this->application->make(ReportFactory::class)->make(
-            $exception,
-            $this->application->make(ContextCollector::class)->collect(),
-            $this->application->make(EventTrail::class)->all(),
-            $suppressedCount,
-        );
+        $payload['suppressed_count'] = $suppressedCount;
 
-        if ($this->isHandlingHttpRequest()) {
-            $this->application->terminating(fn () => $this->sendGuarded($payload));
+        if ($exception instanceof FatalError || ! $this->isHandlingHttpRequest($application)) {
+            $application->make(Transport::class)->send($payload);
 
             return;
         }
 
-        $this->application->make(Transport::class)->send($payload);
+        $this->defer($application, $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function defer(Application $application, array $payload): void
+    {
+        $this->pending[] = $payload;
+
+        if (! $this->shutdownRegistered) {
+            $this->shutdownRegistered = true;
+            register_shutdown_function(fn () => $this->flushPending());
+        }
+
+        $application->terminating(fn () => $this->flushPending());
+    }
+
+    public function flushPending(): void
+    {
+        $payloads = $this->pending;
+        $this->pending = [];
+
+        foreach ($payloads as $payload) {
+            $this->sendGuarded($payload);
+        }
     }
 
     /**
@@ -78,7 +110,7 @@ class Reporter
         $this->isReporting = true;
 
         try {
-            $this->application->make(Transport::class)->send($payload);
+            app(Transport::class)->send($payload);
         } catch (Throwable) {
         } finally {
             $this->isReporting = false;
@@ -99,12 +131,12 @@ class Reporter
         return $exception::class.'|'.$exception->getFile().'|'.$exception->getLine();
     }
 
-    protected function isHandlingHttpRequest(): bool
+    protected function isHandlingHttpRequest(Application $application): bool
     {
-        if (! $this->application->runningInConsole()) {
+        if (! $application->runningInConsole()) {
             return true;
         }
 
-        return $this->application->bound('router') && $this->application['router']->current() !== null;
+        return $application->bound('router') && $application['router']->current() !== null;
     }
 }

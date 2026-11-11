@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Route;
 use NoPanic\Laravel\Report\ReportFactory;
 use NoPanic\Laravel\Reporter;
 use NoPanic\Laravel\Tests\Support\FakeOwnException;
+use NoPanic\Laravel\Transport\ReportThrottle;
+use Symfony\Component\ErrorHandler\Error\FatalError;
 
 beforeEach(function () {
     Http::fake(['*' => Http::response(['id' => 'x'], 202)]);
@@ -59,4 +61,58 @@ it('does not report when the package is disabled', function () {
     app(Reporter::class)->report(new RuntimeException('cli'));
 
     Http::assertNothingSent();
+});
+
+it('defers sending until the application terminates', function () {
+    $sentDuringRequest = null;
+    Route::get('/boom', function () use (&$sentDuringRequest) {
+        app(Reporter::class)->report(new RuntimeException('deferred'));
+        $sentDuringRequest = Http::recorded()->count();
+
+        return 'ok';
+    });
+
+    $this->get('/boom')->assertOk();
+
+    expect($sentDuringRequest)->toBe(0);
+    Http::assertSent(fn (Request $request) => $request['exception']['message'] === 'deferred');
+});
+
+it('sends fatal errors immediately without waiting for terminate', function () {
+    $sentDuringRequest = null;
+    Route::get('/fatal', function () use (&$sentDuringRequest) {
+        app(Reporter::class)->report(new FatalError('out of memory', 0, ['file' => __FILE__, 'line' => 1]));
+        $sentDuringRequest = Http::recorded()->count();
+
+        return 'ok';
+    });
+
+    $this->get('/fatal')->assertOk();
+
+    expect($sentDuringRequest)->toBe(1);
+});
+
+it('sends pending payloads from the shutdown flush exactly once', function () {
+    $sentAfterFlush = null;
+    Route::get('/pending', function () use (&$sentAfterFlush) {
+        $reporter = app(Reporter::class);
+        $reporter->report(new RuntimeException('pending'));
+        $reporter->flushPending();
+        $sentAfterFlush = Http::recorded()->count();
+
+        return 'ok';
+    });
+
+    $this->get('/pending')->assertOk();
+
+    expect($sentAfterFlush)->toBe(1);
+    Http::assertSentCount(1);
+});
+
+it('keeps the suppressed count when building the report fails', function () {
+    app()->bind(ReportFactory::class, fn () => throw new LogicException('broken factory'));
+
+    app(Reporter::class)->report(new RuntimeException('cli'));
+
+    expect(app(ReportThrottle::class)->attempt('RuntimeException|'.__FILE__.'|0'))->toBe(0);
 });

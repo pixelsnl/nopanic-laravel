@@ -34,7 +34,7 @@ class NoPanicServiceProvider extends ServiceProvider
 
             if (method_exists($handler, 'reportable')) {
                 $handler->reportable(function (Throwable $exception): void {
-                    $this->app->make(Reporter::class)->report($exception);
+                    app(Reporter::class)->report($exception);
                 });
             }
         }
