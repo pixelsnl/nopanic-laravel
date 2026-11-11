@@ -3,6 +3,7 @@
 namespace NoPanic\Laravel\Report;
 
 use Composer\InstalledVersions;
+use Illuminate\Database\QueryException;
 use Throwable;
 
 class ReportFactory
@@ -19,13 +20,13 @@ class ReportFactory
         return [
             'notifier' => 'nopanic/laravel '.$this->packageVersion(),
             'seen_at' => (int) floor(microtime(true) * 1000),
-            'stage' => config('nopanic.stage'),
+            'stage' => config('nopanic.stage') ?? app()->environment(),
             'application_version' => config('nopanic.application_version'),
             'language_version' => PHP_VERSION,
             'framework_version' => app()->version(),
             'exception' => [
                 'class' => $exception::class,
-                'message' => $exception->getMessage(),
+                'message' => $this->message($exception),
                 'code' => $exception->getCode(),
                 'level' => 'error',
             ],
@@ -36,6 +37,17 @@ class ReportFactory
             'events' => $events,
             'suppressed_count' => $suppressedCount,
         ];
+    }
+
+    protected function message(Throwable $exception): string
+    {
+        if (! $exception instanceof QueryException) {
+            return $exception->getMessage();
+        }
+
+        $driverMessage = $exception->getPrevious()?->getMessage() ?? 'Database query failed';
+
+        return "{$driverMessage} (SQL: {$exception->getSql()})";
     }
 
     protected function packageVersion(): string

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\QueryException;
 use NoPanic\Laravel\Report\ReportFactory;
 use NoPanic\Laravel\Tests\Support\PayloadContract;
 
@@ -30,4 +31,19 @@ it('uses defaults for missing context and takes context and events when given', 
     expect($payload['attributes'])->toBe(['request' => []]);
     expect($payload['user'])->toBe(['id' => '1']);
     expect($payload['events'])->toHaveCount(1);
+});
+
+it('falls back to the app environment when no stage is configured', function () {
+    config(['nopanic.stage' => null]);
+
+    expect(app(ReportFactory::class)->make(new LogicException('x'))['stage'])->toBe('production');
+});
+
+it('takes the driver message and the sql without bindings from a query exception', function () {
+    $exception = new QueryException('testing', 'select * from users where email = ?', ['jan@example.test'], new PDOException('SQLSTATE[HY000]: no such table: users'));
+
+    $payload = app(ReportFactory::class)->make($exception);
+
+    expect($payload['exception']['message'])->toBe('SQLSTATE[HY000]: no such table: users (SQL: select * from users where email = ?)');
+    expect(json_encode($payload))->not->toContain('jan@example.test');
 });
