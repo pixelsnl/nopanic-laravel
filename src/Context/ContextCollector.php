@@ -19,19 +19,26 @@ class ContextCollector
             $request = $this->resolveRequest();
             $entryPoint = EntryPoint::current();
 
+            $user = $this->user();
             $attributes = ['environment' => $this->environment()];
 
             if ($entryPoint === null && $request !== null) {
                 $entryPoint = $this->webEntryPoint($request);
-                $attributes = ['request' => $this->requestAttributes($request)] + $attributes;
+                $requestAttributes = $this->requestAttributes($request);
+
+                if ($entryPoint['type'] === 'livewire') {
+                    $requestAttributes = $this->livewireRequestAttributes($request, $requestAttributes);
+                }
+
+                $attributes = ['request' => $requestAttributes] + $attributes;
             }
 
-            $attributes = ['user' => $this->userAttributes()] + $attributes;
+            $attributes = ['user' => $user ?? []] + $attributes;
 
             return [
                 'entry_point' => $entryPoint,
                 'attributes' => $attributes,
-                'user' => $this->user(),
+                'user' => $user,
             ];
         } catch (Throwable) {
             return ['entry_point' => null, 'attributes' => [], 'user' => null];
@@ -90,7 +97,7 @@ class ContextCollector
 
     protected function identifier(Request $request, ?Route $route): string
     {
-        $path = $route?->uri() ?? ltrim($request->path(), '/');
+        $path = $route?->uri() ?? $request->path();
 
         return "{$request->method()} {$path}";
     }
@@ -192,33 +199,65 @@ class ContextCollector
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    protected function userAttributes(): array
-    {
-        return $this->user() ?? [];
-    }
-
-    /**
      * @return ?array{id: string, email: ?string}
      */
     protected function user(): ?array
     {
-        if (! config('nopanic.send_user')) {
+        try {
+            if (! config('nopanic.send_user')) {
+                return null;
+            }
+
+            $user = auth()->user();
+
+            if ($user === null) {
+                return null;
+            }
+
+            $email = $user->email ?? null;
+
+            return [
+                'id' => (string) $user->getAuthIdentifier(),
+                'email' => is_string($email) ? $email : null,
+            ];
+        } catch (Throwable) {
             return null;
         }
+    }
 
-        $user = auth()->user();
+    /**
+     * @param  array<string, mixed>  $requestAttributes
+     * @return array<string, mixed>
+     */
+    protected function livewireRequestAttributes(Request $request, array $requestAttributes): array
+    {
+        unset($requestAttributes['body']);
 
-        if ($user === null) {
-            return null;
+        $components = [];
+        $calls = [];
+
+        foreach ((array) $request->input('components', []) as $component) {
+            $snapshot = is_array($component) && is_string($component['snapshot'] ?? null)
+                ? json_decode($component['snapshot'], true)
+                : null;
+
+            $name = is_array($snapshot) ? ($snapshot['memo']['name'] ?? null) : null;
+
+            if (is_string($name)) {
+                $components[] = $name;
+            }
+
+            foreach ((array) ($component['calls'] ?? []) as $call) {
+                $method = is_array($call) ? ($call['method'] ?? null) : null;
+
+                if (is_string($method)) {
+                    $calls[] = $method;
+                }
+            }
         }
 
-        $email = $user->email ?? null;
+        $requestAttributes['livewire'] = ['components' => $components, 'calls' => $calls];
 
-        return [
-            'id' => (string) $user->getAuthIdentifier(),
-            'email' => is_string($email) ? $email : null,
-        ];
+        return $requestAttributes;
     }
 }

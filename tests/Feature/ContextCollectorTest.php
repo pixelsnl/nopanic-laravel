@@ -93,3 +93,37 @@ it('describes a command entry point and resets', function () {
     EntryPoint::reset();
     expect(app(ContextCollector::class)->collect()['entry_point'])->toBeNull();
 });
+
+it('does not leak livewire payload secrets', function () {
+    $payload = ['components' => [[
+        'snapshot' => json_encode(['data' => ['password' => 'hunter2'], 'memo' => ['name' => 'orders.table']]),
+        'updates' => ['form.password' => 'hunter2'],
+        'calls' => [['method' => 'submit', 'params' => ['hunter2']]],
+    ]]];
+    $request = Request::create('/livewire/update', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($payload));
+    app()->instance('request', $request);
+
+    $context = app(ContextCollector::class)->collect();
+
+    expect(json_encode($context))->not->toContain('hunter2');
+    expect($context['attributes']['request']['livewire'])->toBe(['components' => ['orders.table'], 'calls' => ['submit']]);
+});
+
+it('keeps entry point and request when resolving the user fails', function () {
+    $request = Request::create('/orders', 'GET');
+    app()->instance('request', $request);
+    auth()->extend('broken', fn () => throw new RuntimeException('db down'));
+    config(['auth.guards.broken' => ['driver' => 'broken'], 'auth.defaults.guard' => 'broken']);
+
+    $context = app(ContextCollector::class)->collect();
+
+    expect($context['user'])->toBeNull();
+    expect($context['entry_point']['identifier'])->toBe('GET orders');
+    expect($context['attributes']['request']['method'])->toBe('GET');
+});
+
+it('uses a slash for the root path without a route', function () {
+    app()->instance('request', Request::create('/', 'GET'));
+
+    expect(app(ContextCollector::class)->collect()['entry_point']['identifier'])->toBe('GET /');
+});
