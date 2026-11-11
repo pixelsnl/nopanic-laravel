@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Events\RegisterRecorders;
 use NoPanic\Laravel\Support\Activation;
+use NoPanic\Laravel\Transport\ReportThrottle;
+use NoPanic\Laravel\Transport\Transport;
 
 class NoPanicServiceProvider extends ServiceProvider
 {
@@ -15,6 +17,8 @@ class NoPanicServiceProvider extends ServiceProvider
 
         $this->app->singleton(Activation::class);
         $this->app->singleton(EventTrail::class);
+        $this->app->singleton(ReportThrottle::class);
+        $this->app->singleton(Transport::class);
     }
 
     public function boot(): void
