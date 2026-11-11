@@ -1,0 +1,350 @@
+{
+    "notifier": "nopanic/laravel x.y.z",
+    "seen_at": 1700000000000,
+    "stage": "production",
+    "application_version": null,
+    "language_version": "x.y.z",
+    "framework_version": "x.y.z",
+    "exception": {
+        "class": "RuntimeException",
+        "message": "Order 42 could not be charged",
+        "code": 0,
+        "level": "error"
+    },
+    "frames": [
+        {
+            "file": "/tests/Feature/FixtureTest.php",
+            "line": 1,
+            "class": "P\\Tests\\Feature\\FixtureTest",
+            "method": "{closure}",
+            "application_frame": true,
+            "code_snippet": {
+                "1": "<code>"
+            }
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/CallableDispatcher.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\CallableDispatcher",
+            "method": "dispatch",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Route",
+            "method": "runCallable",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Route",
+            "method": "run",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "then",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "runRouteWithinStack",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "runRoute",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "dispatchToRoute",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line": 1,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "dispatch",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php",
+            "line": 1,
+            "class": "Illuminate\\Http\\Middleware\\ValidatePostSize",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php",
+            "line": 1,
+            "class": "Illuminate\\Http\\Middleware\\HandleCors",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php",
+            "line": 1,
+            "class": "Illuminate\\Http\\Middleware\\TrustProxies",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php",
+            "line": 1,
+            "class": "Illuminate\\Http\\Middleware\\ValidatePathEncoding",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "{closure}",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line": 1,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "then",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "sendRequestThroughRouter",
+            "application_frame": false,
+            "code_snippet": []
+        },
+        {
+            "file": "/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line": 1,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "handle",
+            "application_frame": false,
+            "code_snippet": []
+        }
+    ],
+    "entry_point": {
+        "type": "web",
+        "identifier": "GET orders/{order}",
+        "handler": null,
+        "url": "http://localhost/orders/42"
+    },
+    "attributes": {
+        "user": [],
+        "request": {
+            "method": "GET",
+            "url": "http://localhost/orders/42",
+            "query": [],
+            "headers": {
+                "host": [
+                    "localhost"
+                ],
+                "user-agent": [
+                    "Symfony"
+                ],
+                "accept": [
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                ],
+                "accept-language": [
+                    "en-us,en;q=0.5"
+                ],
+                "accept-charset": [
+                    "ISO-8859-1,utf-8;q=0.7,*;q=0.7"
+                ]
+            },
+            "ip": "127.0.0.1"
+        },
+        "environment": {
+            "php_version": "x.y.z",
+            "laravel_version": "x.y.z",
+            "app_env": "production",
+            "app_debug": false,
+            "locale": "en"
+        }
+    },
+    "user": null,
+    "events": [
+        {
+            "type": "query",
+            "at": 1700000000000,
+            "data": {
+                "sql": "select 1 as value",
+                "time_ms": 0,
+                "connection": "testing"
+            }
+        },
+        {
+            "type": "log",
+            "at": 1700000000000,
+            "data": {
+                "level": "warning",
+                "message": "Order lookup was slow"
+            }
+        }
+    ],
+    "suppressed_count": 0
+}
