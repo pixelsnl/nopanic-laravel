@@ -92,3 +92,16 @@ it('explains and succeeds when nopanic is not active', function () {
 
     Http::assertNothingSent();
 });
+
+it('does not sync tasks that do not run in this environment and keeps suffixes consistent', function () {
+    Http::fake(['*' => Http::response(['tasks' => []])]);
+    app()->detectEnvironment(fn () => 'staging');
+    $schedule = app(Schedule::class);
+    $schedule->command('backup:run')->daily()->environments(['production']);
+    $schedule->command('backup:run')->daily();
+    $schedule->command('emails:send')->hourly();
+
+    $this->artisan('nopanic:schedule-sync')->assertSuccessful();
+
+    Http::assertSent(fn (Request $request) => array_column($request['tasks'], 'name') === ['backup:run-2', 'emails:send']);
+});

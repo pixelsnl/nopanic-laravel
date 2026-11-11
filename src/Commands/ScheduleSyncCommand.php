@@ -87,6 +87,10 @@ class ScheduleSyncCommand extends Command
         $tasks = [];
 
         foreach ($schedule->events() as $event) {
+            if (! $event->runsInEnvironment($this->laravel->environment())) {
+                continue;
+            }
+
             $tasks[] = [
                 'name' => $names[$event],
                 'command' => ScheduledTaskName::commandFor($event),
