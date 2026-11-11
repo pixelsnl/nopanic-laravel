@@ -2,12 +2,15 @@
 
 namespace NoPanic\Laravel;
 
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\ServiceProvider;
+use NoPanic\Laravel\Commands\TestCommand;
 use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Events\RegisterRecorders;
 use NoPanic\Laravel\Support\Activation;
 use NoPanic\Laravel\Transport\ReportThrottle;
 use NoPanic\Laravel\Transport\Transport;
+use Throwable;
 
 class NoPanicServiceProvider extends ServiceProvider
 {
@@ -19,15 +22,26 @@ class NoPanicServiceProvider extends ServiceProvider
         $this->app->singleton(EventTrail::class);
         $this->app->singleton(ReportThrottle::class);
         $this->app->singleton(Transport::class);
+        $this->app->singleton(Reporter::class);
     }
 
     public function boot(): void
     {
         if ($this->app->make(Activation::class)->isEnabled()) {
             $this->app->make(RegisterRecorders::class)->register($this->app['events']);
+
+            $handler = $this->app->make(ExceptionHandler::class);
+
+            if (method_exists($handler, 'reportable')) {
+                $handler->reportable(function (Throwable $exception): void {
+                    $this->app->make(Reporter::class)->report($exception);
+                });
+            }
         }
 
         if ($this->app->runningInConsole()) {
+            $this->commands([TestCommand::class]);
+
             $this->publishes([
                 __DIR__.'/../config/nopanic.php' => config_path('nopanic.php'),
             ], 'nopanic-config');

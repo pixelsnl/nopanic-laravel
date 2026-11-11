@@ -15,15 +15,23 @@ class Transport
      */
     public function send(array $payload): void
     {
+        $this->sendNow($payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function sendNow(array $payload): ?int
+    {
         try {
             if ($this->isPaused()) {
-                return;
+                return null;
             }
 
             $body = $this->encode($payload);
 
             if ($body === null) {
-                return;
+                return null;
             }
 
             $response = Http::withBody($body, 'application/json')
@@ -36,7 +44,10 @@ class Transport
             if ($response->status() === 429) {
                 $this->pauseFor((int) $response->header('Retry-After'));
             }
+
+            return $response->status();
         } catch (Throwable) {
+            return null;
         }
     }
 
