@@ -127,3 +127,25 @@ it('uses a slash for the root path without a route', function () {
 
     expect(app(ContextCollector::class)->collect()['entry_point']['identifier'])->toBe('GET /');
 });
+
+it('never sends basic auth credentials', function () {
+    $credentials = base64_encode('jan.basic:hunter2');
+    app()->instance('request', Request::create('/orders', 'GET', server: ['HTTP_AUTHORIZATION' => "Basic {$credentials}"]));
+
+    $context = json_encode(app(ContextCollector::class)->collect());
+
+    expect($context)->not->toContain('hunter2');
+    expect($context)->not->toContain('jan.basic');
+    expect($context)->not->toContain($credentials);
+    expect($context)->not->toContain('php-auth');
+});
+
+it('drops basic auth headers even when no headers are configured for censoring', function () {
+    config(['nopanic.censor_headers' => []]);
+    app()->instance('request', Request::create('/orders', 'GET', server: ['PHP_AUTH_USER' => 'jan.basic', 'PHP_AUTH_PW' => 'hunter2', 'PHP_AUTH_DIGEST' => 'digest-value']));
+
+    $headers = app(ContextCollector::class)->collect()['attributes']['request']['headers'];
+
+    expect($headers)->not->toHaveKeys(['php-auth-user', 'php-auth-pw', 'php-auth-digest']);
+    expect(json_encode($headers))->not->toContain('hunter2')->not->toContain('digest-value');
+});

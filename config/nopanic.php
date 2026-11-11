@@ -24,6 +24,7 @@ return [
         'card_number',
         'cvc',
         'iban',
+        'signature',
     ],
 
     'censor_headers' => [
@@ -33,6 +34,9 @@ return [
         'x-csrf-token',
         'x-xsrf-token',
         'x-nopanic-key',
+        'proxy-authorization',
+        'x-api-key',
+        'x-auth-token',
     ],
 
     'max_events' => 50,

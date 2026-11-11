@@ -6,6 +6,12 @@ class Censor
 {
     protected string $mask = '[censored]';
 
+    /** @var array<int, string> */
+    protected array $sensitiveFragments = ['password', 'token', 'secret'];
+
+    /** @var array<int, string> */
+    protected array $basicAuthHeaders = ['php-auth-user', 'php-auth-pw', 'php-auth-digest'];
+
     /**
      * @param  array<array-key, mixed>  $data
      * @return array<array-key, mixed>
@@ -25,7 +31,13 @@ class Censor
         $censored = [];
 
         foreach ($headers as $name => $value) {
-            if (! in_array(strtolower((string) $name), $keys, true)) {
+            $lowercaseName = strtolower((string) $name);
+
+            if (in_array($lowercaseName, $this->basicAuthHeaders, true)) {
+                continue;
+            }
+
+            if (! $this->isSensitive($lowercaseName, $keys)) {
                 $censored[$name] = $value;
 
                 continue;
@@ -45,7 +57,7 @@ class Censor
     protected function censor(array $data, array $keys): array
     {
         foreach ($data as $key => $value) {
-            if (in_array(strtolower((string) $key), $keys, true)) {
+            if ($this->isSensitive(strtolower((string) $key), $keys)) {
                 $data[$key] = $this->mask;
 
                 continue;
@@ -57,6 +69,24 @@ class Censor
         }
 
         return $data;
+    }
+
+    /**
+     * @param  array<int, string>  $keys
+     */
+    protected function isSensitive(string $lowercaseName, array $keys): bool
+    {
+        if (in_array($lowercaseName, $keys, true)) {
+            return true;
+        }
+
+        foreach ($this->sensitiveFragments as $fragment) {
+            if (str_contains($lowercaseName, $fragment)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
