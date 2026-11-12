@@ -3,6 +3,7 @@
 use Illuminate\Console\Events\ScheduledBackgroundTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Client\ConnectionException;
@@ -113,6 +114,27 @@ it('never lets a failing ping break the scheduler', function () {
 
     event(new ScheduledTaskStarting($event));
     event(new ScheduledTaskFinished($event, 1.0));
+
+    expect(true)->toBeTrue();
+});
+
+it('pings skipped when the scheduler skips a task', function () {
+    Http::fake(['*' => Http::response(['ok' => true])]);
+    $event = app(Schedule::class)->command('backup:run')->hourly()->withoutOverlapping();
+
+    event(new ScheduledTaskSkipped($event));
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://ingest.nopanic.test/api/v1/tasks/ping'
+        && $request['event'] === 'skipped'
+        && $request['name'] === 'backup:run');
+});
+
+it('never lets a failing skipped ping break the scheduler', function () {
+    Http::fake(fn () => throw new ConnectionException('timeout'));
+    $event = app(Schedule::class)->command('backup:run')->hourly();
+
+    event(new ScheduledTaskSkipped($event));
 
     expect(true)->toBeTrue();
 });

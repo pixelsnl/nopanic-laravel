@@ -5,6 +5,7 @@ namespace NoPanic\Laravel\Schedule;
 use Illuminate\Console\Events\ScheduledBackgroundTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
@@ -48,6 +49,11 @@ class ScheduleMonitor
     public function handleBackgroundFinished(ScheduledBackgroundTaskFinished $event): void
     {
         $this->guarded(fn () => $this->sendOutcome($event->task));
+    }
+
+    public function handleSkipped(ScheduledTaskSkipped $event): void
+    {
+        $this->guarded(fn () => $this->send($event->task, 'skipped'));
     }
 
     public function handleFailed(ScheduledTaskFailed $event): void

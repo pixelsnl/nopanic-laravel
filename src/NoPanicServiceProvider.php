@@ -5,6 +5,7 @@ namespace NoPanic\Laravel;
 use Illuminate\Console\Events\ScheduledBackgroundTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\ServiceProvider;
@@ -64,6 +65,7 @@ class NoPanicServiceProvider extends ServiceProvider
         $events->listen(ScheduledTaskStarting::class, [ScheduleMonitor::class, 'handleStarting']);
         $events->listen(ScheduledTaskFinished::class, [ScheduleMonitor::class, 'handleFinished']);
         $events->listen(ScheduledTaskFailed::class, [ScheduleMonitor::class, 'handleFailed']);
+        $events->listen(ScheduledTaskSkipped::class, [ScheduleMonitor::class, 'handleSkipped']);
         $events->listen(ScheduledBackgroundTaskFinished::class, [ScheduleMonitor::class, 'handleBackgroundFinished']);
     }
 }
