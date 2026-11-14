@@ -9,6 +9,8 @@ return [
 
     'schedule_monitoring' => true,
 
+    'security' => true,
+
     'enabled_environments' => ['production', 'staging'],
 
     'stage' => env('NOPANIC_STAGE', env('APP_ENV')),

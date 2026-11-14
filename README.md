@@ -44,6 +44,7 @@ Publish the config file with `php artisan vendor:publish --tag=nopanic-config`. 
 | `reports_per_error_per_minute` | `3` | Local limit per distinct error. Extra occurrences are counted, not sent. |
 | `timeout_seconds` | `2` | Timeout for the request to NoPanic. Fractions such as `0.5` are allowed. |
 | `schedule_monitoring` | `true` | Ping NoPanic around scheduled tasks. |
+| `security` | `true` | Send dependencies and environment facts to NoPanic for security checks. |
 | `tasks_endpoint` | `env('NOPANIC_TASKS_ENDPOINT')` | Base URL for scheduled task syncs and pings. When empty, the scheme and host of `endpoint` are used with the path `/api/v1/tasks`. |
 
 ## What is sent
@@ -99,6 +100,28 @@ Schedule::call(new SendInvoices)->dailyAt('08:00')->description('Send invoices')
 ```
 
 When two tasks end up with the same name, the later ones get a suffix such as `-2`. Renaming a task in your code creates a new task in NoPanic after the next sync. Set `schedule_monitoring` to `false` to turn pings and the sync off.
+
+## Security
+
+NoPanic can check your dependencies against known vulnerabilities and flag risky environment settings. Run this after every deploy (for example in your deploy script):
+
+```bash
+php artisan nopanic:security-sync
+```
+
+The package also registers this command in your scheduler to run hourly, so changes are picked up without a deploy. It only sends data when something changed since the last run, or when the last run was more than 24 hours ago. Use `--force` to send regardless. The command exits with a failure code when NoPanic cannot be reached or rejects the request, so a broken deploy step is noticeable. When the package is not active it explains that and exits successfully.
+
+What is sent:
+
+* The names and versions of the packages in `composer.lock` (production packages only) and, when it exists, `package-lock.json`.
+* The PHP and Laravel versions and the application environment.
+* The value of `APP_DEBUG`.
+* Whether `APP_KEY` is missing, still a well known example value, or set.
+* The `secure` and `http_only` session settings.
+
+What is never sent: your source code, the value of `APP_KEY`, or the value of any other secret or environment variable.
+
+Set `security` to `false` in `config/nopanic.php` to turn the sync and the hourly schedule off. The security sync is not shown as a scheduled task in NoPanic.
 
 ## License
 

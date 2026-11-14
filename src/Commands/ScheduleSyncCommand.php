@@ -87,7 +87,7 @@ class ScheduleSyncCommand extends Command
         $tasks = [];
 
         foreach ($schedule->events() as $event) {
-            if (! $event->runsInEnvironment($this->laravel->environment())) {
+            if (ScheduledTaskName::isSecuritySync($event) || ! $event->runsInEnvironment($this->laravel->environment())) {
                 continue;
             }
 
