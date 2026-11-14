@@ -7,9 +7,11 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\ServiceProvider;
 use NoPanic\Laravel\Commands\ScheduleSyncCommand;
+use NoPanic\Laravel\Commands\SecuritySyncCommand;
 use NoPanic\Laravel\Commands\TestCommand;
 use NoPanic\Laravel\Events\EventTrail;
 use NoPanic\Laravel\Events\RegisterRecorders;
@@ -47,10 +49,12 @@ class NoPanicServiceProvider extends ServiceProvider
             }
         }
 
+        $this->registerSecuritySync();
+
         if ($this->app->runningInConsole()) {
             $this->registerScheduleMonitoring();
 
-            $this->commands([TestCommand::class, ScheduleSyncCommand::class]);
+            $this->commands([TestCommand::class, ScheduleSyncCommand::class, SecuritySyncCommand::class]);
 
             $this->publishes([
                 __DIR__.'/../config/nopanic.php' => config_path('nopanic.php'),
@@ -67,5 +71,16 @@ class NoPanicServiceProvider extends ServiceProvider
         $events->listen(ScheduledTaskFailed::class, [ScheduleMonitor::class, 'handleFailed']);
         $events->listen(ScheduledTaskSkipped::class, [ScheduleMonitor::class, 'handleSkipped']);
         $events->listen(ScheduledBackgroundTaskFinished::class, [ScheduleMonitor::class, 'handleBackgroundFinished']);
+    }
+
+    protected function registerSecuritySync(): void
+    {
+        if (! $this->app->make(Activation::class)->isEnabled() || ! config('nopanic.security', true)) {
+            return;
+        }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('nopanic:security-sync')->hourly()->runInBackground()->withoutOverlapping();
+        });
     }
 }

@@ -90,6 +90,10 @@ class ScheduleMonitor
             return;
         }
 
+        if (ScheduledTaskName::isSecuritySync($task)) {
+            return;
+        }
+
         $names = ScheduledTaskName::forSchedule($this->schedule);
 
         $name = $names->contains($task) ? $names[$task] : ScheduledTaskName::for($task);

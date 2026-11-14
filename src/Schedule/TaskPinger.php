@@ -3,6 +3,7 @@
 namespace NoPanic\Laravel\Schedule;
 
 use Illuminate\Support\Facades\Http;
+use NoPanic\Laravel\Support\Endpoint;
 use Throwable;
 
 class TaskPinger
@@ -15,12 +16,7 @@ class TaskPinger
             return rtrim($configured, '/');
         }
 
-        $parts = parse_url((string) config('nopanic.endpoint'));
-        $scheme = $parts['scheme'] ?? 'https';
-        $host = $parts['host'] ?? 'ingest.nopanic.app';
-        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
-
-        return "{$scheme}://{$host}{$port}/api/v1/tasks";
+        return Endpoint::api('tasks');
     }
 
     public function ping(string $name, string $event, ?string $output = null): void

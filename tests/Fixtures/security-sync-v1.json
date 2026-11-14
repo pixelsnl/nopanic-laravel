@@ -1,0 +1,44 @@
+{
+    "stage": "production",
+    "composer": [
+        {
+            "name": "laravel/framework",
+            "version": "v11.9.0"
+        },
+        {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.8.1"
+        }
+    ],
+    "npm": [
+        {
+            "name": "a",
+            "version": "2.0.0",
+            "dev": false
+        },
+        {
+            "name": "axios",
+            "version": "1.6.0",
+            "dev": false
+        },
+        {
+            "name": "b",
+            "version": "3.1.0",
+            "dev": true
+        },
+        {
+            "name": "vite",
+            "version": "5.0.0",
+            "dev": true
+        }
+    ],
+    "environment": {
+        "php_version": "8.4.0",
+        "laravel_version": "11.9.0",
+        "environment": "production",
+        "app_debug": false,
+        "app_key": "set",
+        "session_secure": true,
+        "session_http_only": true
+    }
+}

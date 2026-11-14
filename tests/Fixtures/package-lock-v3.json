@@ -1,0 +1,12 @@
+{
+    "name": "fixture",
+    "lockfileVersion": 3,
+    "packages": {
+        "": {"name": "fixture", "version": "1.0.0"},
+        "node_modules/axios": {"version": "1.6.0"},
+        "node_modules/a": {"version": "2.0.0"},
+        "node_modules/a/node_modules/b": {"version": "3.1.0", "dev": true},
+        "node_modules/vite": {"version": "5.0.0", "dev": true},
+        "node_modules/linked": {"resolved": "../linked", "link": true}
+    }
+}

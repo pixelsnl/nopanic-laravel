@@ -27,6 +27,11 @@ class ScheduledTaskName
         return static::classFor($event).'-'.substr(md5((string) $event->expression), 0, 8);
     }
 
+    public static function isSecuritySync(Event $event): bool
+    {
+        return str_contains((string) static::commandFor($event), 'nopanic:security-sync');
+    }
+
     public static function commandFor(Event $event): ?string
     {
         if ($event instanceof CallbackEvent || ! is_string($event->command)) {
