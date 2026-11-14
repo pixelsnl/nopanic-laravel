@@ -50,6 +50,21 @@ it('keeps a package that is both a production and a dev dependency as production
     unlink($path);
 });
 
+it('reports the real package name of an npm alias', function () {
+    $path = tempnam(sys_get_temp_dir(), 'lock');
+    file_put_contents($path, json_encode(['lockfileVersion' => 3, 'packages' => [
+        'node_modules/foo' => ['name' => 'bar', 'version' => '2.0.0'],
+        'node_modules/baz' => ['version' => '1.0.0'],
+    ]]));
+
+    expect(LockfileReader::npm($path))->toBe([
+        ['name' => 'bar', 'version' => '2.0.0', 'dev' => false],
+        ['name' => 'baz', 'version' => '1.0.0', 'dev' => false],
+    ]);
+
+    unlink($path);
+});
+
 it('does not throw on an unreadable lockfile', function () {
     $path = tempnam(sys_get_temp_dir(), 'lock');
     file_put_contents($path, '{not json');

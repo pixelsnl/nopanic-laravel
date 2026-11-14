@@ -71,7 +71,11 @@ class LockfileReader
                 continue;
             }
 
-            $found[] = [substr((string) $key, $position + strlen('node_modules/')), $package['version'], (bool) ($package['dev'] ?? false)];
+            $name = is_string($package['name'] ?? null) && $package['name'] !== ''
+                ? $package['name']
+                : substr((string) $key, $position + strlen('node_modules/'));
+
+            $found[] = [$name, $package['version'], (bool) ($package['dev'] ?? false)];
         }
 
         return $found;
